@@ -7,16 +7,14 @@ on:
 jobs:
   list-changes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
-      - name: Setup Git
-        run: |
-          git config --global user.email "action@github.com"
-          git config --global user.name "GitHub Action"
           
       - name: Get PR changes
         run: |
@@ -25,14 +23,20 @@ jobs:
           echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
           echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
           
-          # Use GitHub's API to get the files changed in the PR
-          echo "Changed files:"
-          gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path'
+          # Define token to use (using PAT from secrets)
+          TOKEN="${{ secrets.PR_ACCESS_TOKEN }}"
           
-          # Get the diff using GitHub CLI
-          gh pr diff ${{ github.event.pull_request.number }} > diff.txt
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Get the diff using the GitHub REST API
+          curl -s -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3.diff" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" > diff.txt
+          
+          # List changed files using the GitHub REST API
+          echo "Changed files:"
+          curl -s -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" | \
+            jq -r '.[].filename'
       
       - name: Print diff
         run: |
