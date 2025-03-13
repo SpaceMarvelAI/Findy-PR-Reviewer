@@ -13,26 +13,26 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: Fetch all branches
+      - name: Setup Git
         run: |
-          git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
+          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Action"
           
-      - name: List changes
+      - name: Get PR changes
         run: |
-          # Get the PR base and head refs
-          echo "Base branch: ${GITHUB_BASE_REF}"
-          echo "Head branch: ${GITHUB_HEAD_REF}"
-          echo "PR number: ${{ github.event.number }}"
+          # Debug info
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
+          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
           
-          # Get the diff directly using GitHub's PR comparison
-          DIFF=$(git diff origin/${GITHUB_BASE_REF}...origin/${GITHUB_HEAD_REF})
-          
-          # Save diff to a file
-          echo "$DIFF" > diff.txt
-          
-          # Print a summary of changed files
+          # Use GitHub's API to get the files changed in the PR
           echo "Changed files:"
-          git diff --name-only origin/${GITHUB_BASE_REF}...origin/${GITHUB_HEAD_REF}
+          gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path'
+          
+          # Get the diff using GitHub CLI
+          gh pr diff ${{ github.event.pull_request.number }} > diff.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Print diff
         run: |
