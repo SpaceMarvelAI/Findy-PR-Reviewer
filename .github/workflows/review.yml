@@ -24,7 +24,7 @@ jobs:
           echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
           
           # Define token to use (using PAT from secrets)
-          TOKEN="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"
+          TOKEN="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"
           
           # Get the diff using the GitHub REST API
           curl -s -H "Authorization: token $TOKEN" \
