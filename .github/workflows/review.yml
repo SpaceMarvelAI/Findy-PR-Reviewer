@@ -31,3 +31,12 @@ jobs:
           # Echo the diff
           echo -e $DIFF
           echo "test"
+          
+          # Save diff to a file
+          echo -e $DIFF > diff.txt
+      
+      - name: Print diff
+        run: |
+          echo "=== DIFF OUTPUT ==="
+          cat diff.txt
+          echo "=== END DIFF ==="
