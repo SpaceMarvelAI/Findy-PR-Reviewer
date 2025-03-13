@@ -20,10 +20,9 @@ jobs:
           HEAD_COMMIT=$(git rev-parse --short origin/${GITHUB_HEAD_REF})
 
           # Loop through each file changed in the PR
-          git diff --name-only ${BASE_COMMIT}..${HEAD_COMMIT} | while read file; do
-            echo "File: $file"
-            echo "Diff:"
+          diff = $(git diff --name-only ${BASE_COMMIT}..${HEAD_COMMIT} | while read file; do
             git diff ${BASE_COMMIT}..${HEAD_COMMIT} -- $file
-            echo "------------------------"
+            echo "------------------------")
           done
-          
+
+          echo $diff
