@@ -31,7 +31,6 @@ jobs:
           fi
 
       - name: Print diff if exists
-        if: steps.check-diff.outputs.diff-exists == 'true'
         run: |
           echo "Git diff:"
           cat diff.txt
