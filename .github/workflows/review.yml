@@ -28,7 +28,7 @@ jobs:
 
       - name: Make API Request to AI Agent
         id: ai-review
-        uses: muhfaris/request-action@v1
+        uses: muhfaris/request-action@main
         with:
           url: 'https://your-ai-agent.com/api/review'
           headers: '{"Content-Type": "application/json"}'
