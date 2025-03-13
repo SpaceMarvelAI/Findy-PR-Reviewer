@@ -12,28 +12,27 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+          
+      - name: Fetch all branches
+        run: |
+          git fetch --no-tags --prune --depth=1 origin +refs/heads/*:refs/remotes/origin/*
+          
       - name: List changes
         run: |
-          # Get the base and head commit hashes
-          BASE_COMMIT=$(git rev-parse --short origin/${GITHUB_BASE_REF})
-          HEAD_COMMIT=$(git rev-parse --short origin/${GITHUB_HEAD_REF})
-
-          # Store the diff in a variable
-          DIFF=""
+          # Get the PR base and head refs
+          echo "Base branch: ${GITHUB_BASE_REF}"
+          echo "Head branch: ${GITHUB_HEAD_REF}"
+          echo "PR number: ${{ github.event.number }}"
           
-          # Loop through each file changed in the PR and append to DIFF
-          git diff --name-only ${BASE_COMMIT}..${HEAD_COMMIT} | while read file; do
-            DIFF="${DIFF}$(git diff ${BASE_COMMIT}..${HEAD_COMMIT} -- $file)"
-            DIFF="${DIFF}\n------------------------\n"
-          done
-          
-          # Echo the diff
-          echo -e $DIFF
-          echo "test"
+          # Get the diff directly using GitHub's PR comparison
+          DIFF=$(git diff origin/${GITHUB_BASE_REF}...origin/${GITHUB_HEAD_REF})
           
           # Save diff to a file
-          echo -e $DIFF > diff.txt
+          echo "$DIFF" > diff.txt
+          
+          # Print a summary of changed files
+          echo "Changed files:"
+          git diff --name-only origin/${GITHUB_BASE_REF}...origin/${GITHUB_HEAD_REF}
       
       - name: Print diff
         run: |
