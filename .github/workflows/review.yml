@@ -1,71 +1,46 @@
-name: List PR Changes and Call API
+name: PR Review with AI
 
 on:
   pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  list-changes:
+  ai-review:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: read
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           
-      - name: Get PR changes
+      - name: Get PR diff
+        id: get-diff
         run: |
-          # Debug info
-          echo "PR Number: ${{ github.event.pull_request.number }}"
-          echo "Base SHA: ${{ github.event.pull_request.base.sha }}"
-          echo "Head SHA: ${{ github.event.pull_request.head.sha }}"
+          # Get the PR diff directly from GitHub
+          curl -s -o pr_diff.txt \
+            "https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }}.diff"
           
-          # Define token to use (using PAT from secrets)
-          TOKEN="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"
-          
-          # Get the diff using the GitHub REST API
-          curl -s -H "Authorization: token $TOKEN" \
-            -H "Accept: application/vnd.github.v3.diff" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" > diff.txt
-          
-          # List changed files using the GitHub REST API
-          echo "Changed files:"
-          curl -s -H "Authorization: token $TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" > files.json
-          
-          # Debug the response
-          echo "API Response:"
-          cat files.json
-          
-          # Try to extract filenames with a more robust approach
-          if jq -e . files.json > /dev/null 2>&1; then
-            if jq 'type' files.json | grep -q "array"; then
-              jq -r '.[].filename' files.json
-            else
-              echo "Response is not an array"
-              jq '.' files.json
-            fi
+          # Check if we got the diff
+          if [ -s pr_diff.txt ]; then
+            echo "Successfully retrieved PR diff"
           else
-            echo "Invalid JSON response"
-            cat files.json
+            echo "Failed to retrieve PR diff"
+            exit 1
           fi
-      
-      - name: Print diff
-        run: |
-          echo "=== DIFF OUTPUT ==="
-          cat diff.txt
-          echo "=== END DIFF ==="
           
-      - name: AI PR Review
+          # Print some stats about the diff
+          echo "Diff size: $(wc -c < pr_diff.txt) bytes"
+          echo "Changed files: $(grep -c "^diff --git" pr_diff.txt)"
+      
+      - name: Call AI Review API
         run: |
           # Read the diff file
-          DIFF_CONTENT=$(cat diff.txt)
+          DIFF_CONTENT=$(cat pr_diff.txt)
           
-          # Prepare the JSON payload
+          # Prepare the JSON payload - escape special characters
           JSON_PAYLOAD=$(jq -n \
             --arg pr_number "${{ github.event.pull_request.number }}" \
             --arg diff_string "$DIFF_CONTENT" \
@@ -73,8 +48,17 @@ jobs:
           
           # Call the AI PR review API
           echo "Calling AI PR Review API..."
-          curl --location 'https://pr-review-agent-demo-442640027315.us-central1.run.app' \
+          RESPONSE=$(curl --location 'https://pr-review-agent-demo-442640027315.us-central1.run.app/reviews' \
             --header 'Content-Type: application/json' \
-            --data "$JSON_PAYLOAD"
+            --data "$JSON_PAYLOAD")
           
-          echo "AI PR Review completed" 
+          echo "API Response: $RESPONSE"
+          
+          # Check if the API call was successful
+          if [[ "$RESPONSE" == *"success"* ]]; then
+            echo "AI PR Review completed successfully"
+          else
+            echo "AI PR Review failed"
+            echo "$RESPONSE"
+            exit 1
+          fi 
