@@ -29,4 +29,5 @@ jobs:
           done
           
           # Echo the diff
-          echo -e "$DIFF"
+          echo -e $DIFF
+          echo "test"
