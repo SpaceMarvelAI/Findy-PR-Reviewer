@@ -32,7 +32,7 @@ jobs:
 
           # Print the diff
           echo "Git diff:"
-          echo "$diff"
+          echo $diff
 
           # Call the API
           curl -X POST \
