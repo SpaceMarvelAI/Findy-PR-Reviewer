@@ -21,22 +21,32 @@ jobs:
           raw_diff_file_output: diff.txt
           file_output_only: "true"
 
-      - name: Print diff
+      - name: Check if diff.txt exists
+        run: |
+          ls -la
+          if [ -f diff.txt ]; then
+            echo "diff.txt exists"
+          else
+            echo "diff.txt does not exist"
+          fi
+
+      - name: Print diff if exists
+        if: steps.check-diff.outputs.diff-exists == 'true'
         run: |
           echo "Git diff:"
           cat diff.txt
 
       - name: Make API Request to AI Agent
         id: ai-review
-        uses: muhfaris/request-action@main
+        uses: fjogeleit/http-request-action@v1
         with:
           url: 'https://your-ai-agent.com/api/review'
-          headers: '{"Content-Type": "application/json"}'
-          body: |
+          method: 'POST'
+          customHeaders: '{"Content-Type": "application/json"}'
+          data: |
             {
               "repository": "${{ github.repository }}",
               "pullRequestNumber": "${{ github.event.pull_request.number }}",
-              "diff": "$(cat diff.txt)"
+              "diff": "$(cat diff.txt || echo 'No diff available')"
             }
-          method: POST
-          auth: Bearer ${{ secrets.AI_AGENT_TOKEN }}
+          bearerToken: ${{ secrets.AI_AGENT_TOKEN }}
