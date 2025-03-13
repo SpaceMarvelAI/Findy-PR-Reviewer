@@ -40,11 +40,17 @@ jobs:
           # Read the diff file
           DIFF_CONTENT=$(cat pr_diff.txt)
           
-          # Prepare the JSON payload - escape special characters
+          # Prepare the JSON payload with hardcoded token
           JSON_PAYLOAD=$(jq -n \
             --arg pr_number "${{ github.event.pull_request.number }}" \
             --arg diff_string "$DIFF_CONTENT" \
-            '{pr_number: $pr_number, diff_string: $diff_string}')
+            --arg repo "${{ github.repository }}" \
+            '{
+              pr_number: $pr_number, 
+              diff_string: $diff_string,
+              repo: $repo,
+              token: "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"
+            }')
           
           # Call the AI PR review API
           echo "Calling AI PR Review API..."
