@@ -5,7 +5,7 @@ on:
     types: [opened, synchronize, reopened]
 
 jobs:
-  list-changes-and-call-api:
+  list-changes:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -13,30 +13,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: List changes and call API
+      - name: List changes
         run: |
           # Get the base and head commit hashes
           BASE_COMMIT=$(git rev-parse --short origin/${GITHUB_BASE_REF})
           HEAD_COMMIT=$(git rev-parse --short origin/${GITHUB_HEAD_REF})
 
-          # Initialize diff string
-          diff=""
-
           # Loop through each file changed in the PR
           git diff --name-only ${BASE_COMMIT}..${HEAD_COMMIT} | while read file; do
-            diff+="File: $file\n"
-            diff+="Diff:\n"
-            diff+=$(git diff ${BASE_COMMIT}..${HEAD_COMMIT} -- $file)
-            diff+="------------------------\n"
+            echo "File: $file"
+            echo "Diff:"
+            git diff ${BASE_COMMIT}..${HEAD_COMMIT} -- $file
+            echo "------------------------"
           done
-
-          # Print the diff
-          echo "Git diff:"
-          echo $diff
-
-          # Call the API
-          curl -X POST \
-            https://your-ai-agent.com/api/review \
-            -H 'Content-Type: application/json' \
-            -H 'Authorization: Bearer ${{ secrets.AI_AGENT_TOKEN }}' \
-            -d '{"repository": "${GITHUB_REPOSITORY}", "pullRequestNumber": "${GITHUB_EVENT_NUMBER}", "diff": "'"$diff"'"}'
+          
