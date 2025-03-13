@@ -10,7 +10,7 @@ from jaf.pipeline.code.git_diff_reviewer import GitDiffReviewer
 app=FastAPI()
 load_dotenv("/.env")
 
-
+print("Starting application...")
 
 
 ## use of llm object
@@ -18,20 +18,26 @@ q = Query()
 q.system_prompt = "Help User with ans"
 q.prompt = "say hello"
 
+print("Initializing LLM...")
 llm = OpenAILLM(
     model_name="meta-llama/Llama-3.3-70B-Instruct-Turbo",
     base_url="https://api.together.xyz",
     api_key="3c98137bd32351482bbd172add8248e6c5918d1e94e882f2f5fcd3d8bfa6a839"
 )
 
+print("Calling LLM for initial test...")
 llm(q)
 
-print(q.response)
+
+print(f"LLM Response: {q.response}")
+print(f"LLM Prompt: {q.prompt}")
 
 USER_PROMPT_DIFF_SUMMARIZATION="""
 You are a senior developer with deep buisness knowledge of you projects. 
 You will be diff files from PRs, You job is to summarize each change that the PR brings at a function level, make sure to use bullet points and render in MARKDOWN Be as Descriptive as possible. Also higlight and make the summaries slightly buisness whenever possible.
 """
+
+print("User prompt for diff summarization defined")
 
 # ## sample diff review
 # gdf = GitDiffReviewer("./")
@@ -42,20 +48,36 @@ You will be diff files from PRs, You job is to summarize each change that the PR
 # print(res.response)
 
 
-
-
-app.post("/reviews")
+@app.post("/reviews")
 async def review_pr(request: Request):
-    request=request.json()
+    print(f"Received review request")
+    request_json = await request.json()
+    print(f"Request JSON: {request_json}")
+    
+    print("Initializing GitDiffReviewer...")
     gdf = GitDiffReviewer("./")
     gdf.user_prompt_query=USER_PROMPT_DIFF_SUMMARIZATION
     gdf.add(llm)
-    diff_string = request.get("diff_string")
+    
+    diff_string = request_json.get("diff_string")
+    pr_number = request_json.get("pr_number")
+    print(f"PR Number: {pr_number}")
+    print(f"Diff string length: {len(diff_string) if diff_string else 0}")
+    
+    print("Calling GitDiffReviewer...")
     res = gdf(diff_string)
+    print(f"GitDiffReviewer response received, length: {len(res.response) if res.response else 0}")
+    
     try:
-        status=add_comment(llm_response=res.response,pr_number=request.pr_number)
+        print("Adding comment to PR...")
+        status=add_comment(llm_response=res.response, pr_number=pr_number)
+        print(f"Comment status code: {status}")
         if status!=201:
-            return {"status":"success","message":"Failed to add comments"},500
+            print(f"Failed to add comment, status code: {status}")
+            return {"status":"error","message":"Failed to add comments"}, 500
     except Exception as e:
-        return {"status":"success","message":e},500
-    return {"status":"success"},200
+        print(f"Exception when adding comment: {str(e)}")
+        return {"status":"error","message":str(e)}, 500
+    
+    print("Successfully completed PR review")
+    return {"status":"success"}, 200
