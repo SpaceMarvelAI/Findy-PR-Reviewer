@@ -1,0 +1,42 @@
+name: PR Diff and AI Review Workflow
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  get-diff-and-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get diff
+        id: git-diff-action
+        uses: GrantBirki/git-diff-action@v1.0.0
+        with:
+          json_diff_file_output: diff.json
+          raw_diff_file_output: diff.txt
+          file_output_only: "true"
+
+      - name: Print diff
+        run: |
+          echo "Git diff:"
+          cat diff.txt
+
+      - name: Make API Request to AI Agent
+        id: ai-review
+        uses: muhfaris/request-action@v1
+        with:
+          url: 'https://your-ai-agent.com/api/review'
+          headers: '{"Content-Type": "application/json"}'
+          body: |
+            {
+              "repository": "${{ github.repository }}",
+              "pullRequestNumber": "${{ github.event.pull_request.number }}",
+              "diff": "$(cat diff.txt)"
+            }
+          method: POST
+          auth: Bearer ${{ secrets.AI_AGENT_TOKEN }}
