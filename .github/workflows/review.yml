@@ -2,8 +2,7 @@ name: List PR Changes and Call API
 
 on:
   pull_request:
-    branches:
-      - master
+    types: [opened, synchronize, reopened]
 
 jobs:
   list-changes-and-call-api:
